@@ -180,7 +180,7 @@ def ucs_timkiem(dich):
 def dls_timkiem(dich, limit=SO_HANG):
     target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
     buoc = []
-    cutoff = object()  # sentinel cho cutoff
+    cutoff = object()  
 
     def recursive_dls(state, used, depth):
         buoc.append(state.copy())
@@ -189,7 +189,7 @@ def dls_timkiem(dich, limit=SO_HANG):
                 return state
             else:
                 return None
-        elif depth == limit:  # đạt giới hạn
+        elif depth == limit:  
             return cutoff
         else:
             cutoff_occurred = False
@@ -206,6 +206,93 @@ def dls_timkiem(dich, limit=SO_HANG):
     result = recursive_dls([], set(), 0)
     if result is not None and result is not cutoff:
         return [result[:k] for k in range(0, SO_HANG + 1)]
+    return buoc
+
+
+#interative Deep search dùng dls
+def ids_timkiem(dich):
+    for limit in range(1, SO_HANG + 1):
+        ket_qua = dls_timkiem(dich, limit=limit)
+        if ket_qua and len(ket_qua[-1]) == SO_HANG:
+            return ket_qua
+    return []
+
+#interative deep search dùng dfs
+def ids_dfs_timkiem(dich):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+
+    def dls_dfs(state, used, depth, limit, buoc):
+        buoc.append(state.copy())
+        if depth == SO_HANG:
+            if all(state[i][1] == target_cols[i] for i in range(SO_HANG)):
+                return state
+            return None
+        if depth == limit:
+            return None
+        for c in range(SO_HANG):
+            if c not in used:
+                child = state + [(depth, c)]
+                result = dls_dfs(child, used | {c}, depth + 1, limit, buoc)
+                if result is not None:
+                    return result
+        return None
+
+    for limit in range(1, SO_HANG + 1):
+        buoc = []
+        ket_qua = dls_dfs([], set(), 0, limit, buoc)
+        if ket_qua is not None:
+            return [ket_qua[:k] for k in range(0, SO_HANG + 1)]
+    return []
+
+
+#greedy search
+def heuristic(state, goal_cols):
+    #khoảng cách từ tt hiện tại so với tt đích tính theo cột
+    return sum(abs(col - goal_cols[row]) for row, col in state)
+
+
+def greedy_timkiem(dich):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+    frontier = [(heuristic([], target_cols), [], set())]  # (h, state, used)
+    buoc = []
+    while frontier:
+        h, state, used = heapq.heappop(frontier)
+        buoc.append(state)
+        r = len(state)
+        if r == SO_HANG:
+            if [col for _, col in state] == target_cols:
+                return [state[:k] for k in range(SO_HANG+1)]
+            continue
+        cot_uu_tien = target_cols[r]
+        candidates = [cot_uu_tien] + [c for c in range(SO_HANG) if c != cot_uu_tien and c not in used]
+        for c in candidates:
+            new_state = state + [(r, c)]
+            new_used = used | {c}
+            h_new = heuristic(new_state, target_cols)
+            heapq.heappush(frontier, (h_new, new_state, new_used))
+    return buoc
+
+def astar_timkiem(dich):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+    frontier = [(heuristic([], target_cols), 0, [], set())]  # (f, g, state, used)
+    buoc = []
+    while frontier:
+        f, g, state, used = heapq.heappop(frontier)
+        buoc.append(state)
+        r = len(state)
+        if r == SO_HANG:
+            if [col for _, col in state] == target_cols:
+                return [state[:k] for k in range(SO_HANG+1)]
+            continue
+        cot_uu_tien = target_cols[r]
+        candidates = [cot_uu_tien] + [c for c in range(SO_HANG) if c != cot_uu_tien and c not in used]
+        for c in candidates:
+            new_state = state + [(r, c)]
+            new_used = used | {c}
+            g_new = g + 1
+            h_new = heuristic(new_state, target_cols)
+            f_new = g_new + h_new
+            heapq.heappush(frontier, (f_new, g_new, new_state, new_used))
     return buoc
 
 # ========= Quản lý hiển thị/chạy =========
@@ -260,6 +347,23 @@ def chuan_bi_va_chay(thuat_toan):
         ds_buoc = dls_timkiem(trangthai_dich, limit=SO_HANG)  
         che_do[0] = "DLS"
         lbl_trai.config(text="Bàn cờ thuật toán (DLS)")
+    elif thuat_toan == "IDS":
+        ds_buoc = ids_timkiem(trangthai_dich)
+        che_do[0] = "IDS"
+        lbl_trai.config(text="Bàn cờ thuật toán (IDS)")
+    elif thuat_toan == "IDS-DFS":
+        ds_buoc = ids_dfs_timkiem(trangthai_dich)
+        che_do[0] = "IDS-DFS"
+        lbl_trai.config(text="Bàn cờ thuật toán (IDS-DFS)")
+    elif thuat_toan == "GREEDY":
+        ds_buoc = greedy_timkiem(trangthai_dich)
+        che_do[0] = "GREEDY"
+        lbl_trai.config(text="Bàn cờ thuật toán (Greedy)")
+    elif thuat_toan == "ASTAR":
+        ds_buoc = astar_timkiem(trangthai_dich)
+        che_do[0] = "ASTAR"
+        lbl_trai.config(text="Bàn cờ thuật toán (A*)")
+
 
     ve_banco(canvas_trai, O_TRAI)
     phat_tiep()
@@ -281,6 +385,19 @@ def tao_dich_moi():
     elif che_do[0] == "DLS":
         ds_buoc = dls_timkiem(trangthai_dich, limit=SO_HANG)
         phat_tiep()
+    elif che_do[0] == "IDS":
+        ds_buoc = ids_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "IDS-DFS":
+        ds_buoc = ids_dfs_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "GREEDY":
+        ds_buoc = greedy_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "ASTAR":
+        ds_buoc = astar_timkiem(trangthai_dich)
+        phat_tiep()
+
 
 # ========= Nút điều khiển =========
 btn_dfs = tk.Button(
@@ -326,6 +443,50 @@ btn_dls = tk.Button(
     command=lambda: chuan_bi_va_chay("DLS")
 )
 btn_dls.pack(pady=6)
+
+btn_ids = tk.Button(
+    khung_giua,
+    text="Chạy IDS",
+    font=("Arial", 14, "bold"),
+    bg="#2c3e50",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("IDS")
+)
+btn_ids.pack(pady=6)
+
+btn_ids_dfs = tk.Button(
+    khung_giua,
+    text="Chạy IDS-DFS",
+    font=("Arial", 14, "bold"),
+    bg="#9b59b6",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("IDS-DFS")
+)
+btn_ids_dfs.pack(pady=6)
+
+btn_greedy = tk.Button(
+    khung_giua,
+    text="Chạy Greedy",
+    font=("Arial", 14, "bold"),
+    bg="#d35400",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("GREEDY")
+)
+btn_greedy.pack(pady=6)
+
+btn_astar = tk.Button(
+    khung_giua,
+    text="Chạy A*",
+    font=("Arial", 14, "bold"),
+    bg="#27ae60",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("ASTAR")
+)
+btn_astar.pack(pady=6)
 
 btn_dung = tk.Button(
     khung_giua,
