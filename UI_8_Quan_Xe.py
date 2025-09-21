@@ -3,6 +3,9 @@ import tkinter.font as tkfont
 import random
 from collections import deque
 import heapq
+import math
+import random
+from tkinter import messagebox
 
 SO_HANG = 8
 O_TRAI = 70
@@ -295,6 +298,105 @@ def astar_timkiem(dich):
             heapq.heappush(frontier, (f_new, g_new, new_state, new_used))
     return buoc
 
+# ========= Hill Climbing =========
+def hill_climbing_timkiem(dich):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+
+    def heuristic_hc(state):
+        return sum(1 for r, c in state if c == target_cols[r])
+
+    state = []
+    used = set()
+    buoc = [state.copy()]
+
+    for r in range(SO_HANG):
+        best_move = None
+        best_h = -1
+
+        for c in range(SO_HANG):
+            if c not in used:
+                new_state = state + [(r, c)]
+                h_val = heuristic_hc(new_state)
+                if h_val > best_h:
+                    best_h = h_val
+                    best_move = (r, c)
+
+        if best_move is None:
+            break
+
+        state.append(best_move)
+        used.add(best_move[1])
+        buoc.append(state.copy())
+
+        if [col for _, col in state] == target_cols:
+            return [state[:k] for k in range(len(state)+1)]
+
+    return buoc
+
+def simulated_annealing_timkiem(dich):
+    T0 = 10.0
+    alpha = 0.995
+    Tmin = 1e-4
+    max_outer = 5000  # giới hạn vòng lặp ngoài để tránh chạy vô hạn
+
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+
+    # h(H): số hàng đang khác đích
+    def h(cols):
+        return sum(1 for r, c in enumerate(cols) if c != target_cols[r])
+
+    cols = list(range(SO_HANG))
+    random.shuffle(cols)
+
+    t = 0
+    while t < max_outer:
+        if cols == target_cols:
+            goal_state = [(r, cols[r]) for r in range(SO_HANG)]
+            return [goal_state[:k] for k in range(0, SO_HANG + 1)]
+
+        T = T0 * (alpha ** t)
+
+        if T < Tmin:
+            try:
+                messagebox.showinfo("Kết quả", "Không tìm được trạng thái đích bằng Simulated Annealing.")
+            except Exception:
+                pass
+            return []
+
+        queue = []
+        for i in range(SO_HANG - 1):
+            for j in range(i + 1, SO_HANG):
+                new_cols = cols[:]
+                new_cols[i], new_cols[j] = new_cols[j], new_cols[i]
+                queue.append(new_cols)
+
+        if not queue:
+            try:
+                messagebox.showinfo("Kết quả", "Không có trạng thái kế tiếp được sinh ra.")
+            except Exception:
+                pass
+            return []
+        
+        hH = h(cols)
+        M = min(queue, key=h)  
+        delta = h(M) - hH
+
+        if delta < 0:
+            cols = M
+        else:
+            p = math.exp(-delta / T)
+            if random.random() < p:
+                cols = M
+            
+
+        t += 1
+
+    try:
+        messagebox.showinfo("Kết quả", "Không tìm được trạng thái đích bằng Simulated Annealing.")
+    except Exception:
+        pass
+    return []
+
 # ========= Quản lý hiển thị/chạy =========
 trangthai_dich = tao_dich()
 ds_buoc = []
@@ -363,6 +465,14 @@ def chuan_bi_va_chay(thuat_toan):
         ds_buoc = astar_timkiem(trangthai_dich)
         che_do[0] = "ASTAR"
         lbl_trai.config(text="Bàn cờ thuật toán (A*)")
+    elif thuat_toan == "HILL":
+        ds_buoc = hill_climbing_timkiem(trangthai_dich)
+        che_do[0] = "HILL"
+        lbl_trai.config(text="Bàn cờ thuật toán (Hill Climbing)")
+    elif thuat_toan == "SA":
+        ds_buoc = simulated_annealing_timkiem(trangthai_dich)
+        che_do[0] = "SA"
+        lbl_trai.config(text="Bàn cờ thuật toán (Simulated Annealing)")
 
 
     ve_banco(canvas_trai, O_TRAI)
@@ -396,6 +506,15 @@ def tao_dich_moi():
         phat_tiep()
     elif che_do[0] == "ASTAR":
         ds_buoc = astar_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "UCS":
+        ds_buoc = ucs_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "HILL":
+        ds_buoc = hill_climbing_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "SA":
+        ds_buoc = simulated_annealing_timkiem(trangthai_dich)
         phat_tiep()
 
 
@@ -487,6 +606,28 @@ btn_astar = tk.Button(
     command=lambda: chuan_bi_va_chay("ASTAR")
 )
 btn_astar.pack(pady=6)
+
+btn_hill = tk.Button(
+    khung_giua,
+    text="Chạy Hill Climbing",
+    font=("Arial", 14, "bold"),
+    bg="#6c5ce7",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("HILL")
+)
+btn_hill.pack(pady=6)
+
+btn_sa = tk.Button(
+    khung_giua,
+    text="Chạy SA",
+    font=("Arial", 14, "bold"),
+    bg="#00cec9",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("SA")
+)
+btn_sa.pack(pady=6)
 
 btn_dung = tk.Button(
     khung_giua,
