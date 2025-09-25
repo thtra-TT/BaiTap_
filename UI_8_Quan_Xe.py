@@ -397,6 +397,100 @@ def simulated_annealing_timkiem(dich):
         pass
     return []
 
+#Beam search
+def beam_search_timkiem(dich, beam_width=3):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+
+    def h(state):
+        return sum(1 for i, (_, c) in enumerate(state) if c != target_cols[i])
+
+    frontier = [([], set())]
+
+    while frontier:
+        new_frontier = []
+        for state, used in frontier:
+            r = len(state)
+            if r == SO_HANG:
+                if all(state[i][1] == target_cols[i] for i in range(SO_HANG)):
+                    return [state[:k] for k in range(0, SO_HANG + 1)]
+                continue
+
+            next_cols = []
+            if target_cols[r] not in used:
+                next_cols.append(target_cols[r])
+            for c in range(SO_HANG):
+                if c != target_cols[r] and c not in used:
+                    next_cols.append(c)
+
+            for c in next_cols:
+                new_frontier.append((state + [(r, c)], used | {c}))
+
+        new_frontier.sort(key=lambda x: h(x[0]))
+        frontier = new_frontier[:beam_width]
+
+    return []
+
+import random
+
+def genetic_algorithm_timkiem(dich, pop_size=30, generations=500, mutation_rate=0.2):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+
+    # --- fitness: số quân đúng vị trí ---
+    def fitness(cols):
+        return sum(1 for i, c in enumerate(cols) if c == target_cols[i])
+
+    # --- sinh cá thể ngẫu nhiên ---
+    def random_individual():
+        cols = list(range(SO_HANG))
+        random.shuffle(cols)
+        return cols
+
+    # --- lai ghép (Order Crossover - OX) ---
+    def crossover(p1, p2):
+        a, b = sorted(random.sample(range(SO_HANG), 2))
+        child = [-1] * SO_HANG
+        child[a:b] = p1[a:b]
+        fill = [c for c in p2 if c not in child]
+        j = 0
+        for i in range(SO_HANG):
+            if child[i] == -1:
+                child[i] = fill[j]
+                j += 1
+        return child
+
+    # --- đột biến ---
+    def mutate(cols):
+        if random.random() < mutation_rate:
+            i, j = random.sample(range(SO_HANG), 2)
+            cols[i], cols[j] = cols[j], cols[i]
+        return cols
+
+    # --- khởi tạo quần thể ---
+    population = [random_individual() for _ in range(pop_size)]
+
+    for gen in range(generations):
+        # sắp xếp theo fitness
+        population.sort(key=lambda ind: fitness(ind), reverse=True)
+
+        # kiểm tra có lời giải chưa
+        if fitness(population[0]) == SO_HANG:
+            best = population[0]
+            goal_state = [(r, best[r]) for r in range(SO_HANG)]
+            return [goal_state[:k] for k in range(0, SO_HANG + 1)]
+
+        # chọn lọc + lai ghép
+        new_population = population[:2]  # elitism: giữ lại 2 tốt nhất
+        while len(new_population) < pop_size:
+            p1, p2 = random.sample(population[:10], 2)  # chọn trong top 10
+            child = crossover(p1, p2)
+            child = mutate(child)
+            new_population.append(child)
+
+        population = new_population
+
+    return []
+
+
 # ========= Quản lý hiển thị/chạy =========
 trangthai_dich = tao_dich()
 ds_buoc = []
@@ -473,7 +567,14 @@ def chuan_bi_va_chay(thuat_toan):
         ds_buoc = simulated_annealing_timkiem(trangthai_dich)
         che_do[0] = "SA"
         lbl_trai.config(text="Bàn cờ thuật toán (Simulated Annealing)")
-
+    elif thuat_toan == "BEAM":
+        ds_buoc = beam_search_timkiem(trangthai_dich, beam_width=3)
+        che_do[0] = "BEAM"
+        lbl_trai.config(text="Bàn cờ thuật toán (Beam Search)")
+    elif thuat_toan == "GENETIC":
+        ds_buoc = genetic_algorithm_timkiem(trangthai_dich)
+        che_do[0] = "GENETIC"
+        lbl_trai.config(text="Bàn cờ thuật toán (Genetic Algorithm)")
 
     ve_banco(canvas_trai, O_TRAI)
     phat_tiep()
@@ -516,7 +617,12 @@ def tao_dich_moi():
     elif che_do[0] == "SA":
         ds_buoc = simulated_annealing_timkiem(trangthai_dich)
         phat_tiep()
-
+    elif che_do[0] == "BEAM":
+        ds_buoc = beam_search_timkiem(trangthai_dich, beam_width=3)
+        phat_tiep()
+    elif che_do[0] == "GENETIC":
+        ds_buoc = genetic_algorithm_timkiem(trangthai_dich)
+        phat_tiep()
 
 # ========= Nút điều khiển =========
 btn_dfs = tk.Button(
@@ -628,6 +734,29 @@ btn_sa = tk.Button(
     command=lambda: chuan_bi_va_chay("SA")
 )
 btn_sa.pack(pady=6)
+
+btn_beam = tk.Button(
+    khung_giua,
+    text="Chạy Beam Search",
+    font=("Arial", 14, "bold"),
+    bg="#fd79a8",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("BEAM")
+)
+btn_beam.pack(pady=6)
+
+btn_genetic = tk.Button(
+    khung_giua,
+    text="Chạy Genetic",
+    font=("Arial", 14, "bold"),
+    bg="#e74c3c",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("GENETIC")
+)
+btn_genetic.pack(pady=6)
+
 
 btn_dung = tk.Button(
     khung_giua,
