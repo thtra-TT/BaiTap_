@@ -490,6 +490,83 @@ def genetic_algorithm_timkiem(dich, pop_size=30, generations=500, mutation_rate=
 
     return []
 
+# ========= AND-OR Search =========
+def andor_timkiem(dich):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+    buoc = []
+
+    def or_search(state, used, path):
+        buoc.append(state.copy())
+        r = len(state)
+
+        if r == SO_HANG:
+            if [col for _, col in state] == target_cols:
+                return state
+            return None
+
+        if r in path:  # phát hiện vòng lặp
+            return None
+
+        for c in range(SO_HANG):
+            if c not in used:
+                result = and_search(state + [(r, c)], used | {c}, path | {r})
+                if result is not None:
+                    return result
+        return None
+
+    def and_search(state, used, path):
+        result = or_search(state, used, path)
+        if result is None:
+            return None
+        return result
+
+    result = or_search([], set(), set())
+    if result is not None:
+        return [result[:k] for k in range(0, SO_HANG + 1)]
+    return buoc
+
+# ========= BFS trên tập trạng thái niềm tin =========
+from collections import deque
+
+def bfs_belief_timkiem(dich):
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+    buoc = []
+
+    def is_goal(state):
+        return len(state) == SO_HANG and all(state[i][1] == target_cols[i] for i in range(SO_HANG))
+
+    initial_belief = frozenset({tuple([])})
+    queue = deque([(initial_belief, [])])
+    visited = set([initial_belief])
+
+    while queue:
+        belief, path = queue.popleft()
+        buoc.append([list(s) for s in belief])
+
+        if all(is_goal(list(s)) for s in belief):
+            sample = list(belief)[0]
+            return [list(sample[:k]) for k in range(len(sample)+1)]
+
+        r = len(next(iter(belief)))
+        if r >= SO_HANG:
+            continue
+
+        for c in range(SO_HANG):
+            next_belief = set()
+            for s in belief:
+                used_cols = {col for _, col in s}
+                if c not in used_cols:
+                    new_state = list(s) + [(r, c)]
+                    next_belief.add(tuple(new_state))
+            if not next_belief:
+                continue
+
+            next_belief = frozenset(next_belief)
+            if next_belief not in visited:
+                visited.add(next_belief)
+                queue.append((next_belief, path + [c]))
+
+    return buoc
 
 # ========= Quản lý hiển thị/chạy =========
 trangthai_dich = tao_dich()
@@ -575,6 +652,15 @@ def chuan_bi_va_chay(thuat_toan):
         ds_buoc = genetic_algorithm_timkiem(trangthai_dich)
         che_do[0] = "GENETIC"
         lbl_trai.config(text="Bàn cờ thuật toán (Genetic Algorithm)")
+    elif thuat_toan == "ANDOR":
+        ds_buoc = andor_timkiem(trangthai_dich)
+        che_do[0] = "ANDOR"
+        lbl_trai.config(text="Bàn cờ thuật toán (AND-OR)")
+    elif thuat_toan == "BFS-BELIEF":
+        ds_buoc = bfs_belief_timkiem(trangthai_dich)
+        che_do[0] = "BFS-BELIEF"
+        lbl_trai.config(text="Bàn cờ thuật toán (BFS Belief)")
+
 
     ve_banco(canvas_trai, O_TRAI)
     phat_tiep()
@@ -623,6 +709,13 @@ def tao_dich_moi():
     elif che_do[0] == "GENETIC":
         ds_buoc = genetic_algorithm_timkiem(trangthai_dich)
         phat_tiep()
+    elif che_do[0] == "ANDOR":
+        ds_buoc = andor_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "BFS-BELIEF":
+        ds_buoc = bfs_belief_timkiem(trangthai_dich)
+        phat_tiep()
+
 
 # ========= Nút điều khiển =========
 btn_dfs = tk.Button(
@@ -645,7 +738,7 @@ btn_bfs = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("BFS")
 )
-btn_bfs.pack(pady=6)
+btn_bfs.pack(pady=1)
 
 btn_ucs = tk.Button(
     khung_giua,
@@ -656,7 +749,7 @@ btn_ucs = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("UCS")
 )
-btn_ucs.pack(pady=6)
+btn_ucs.pack(pady=1)
 
 btn_dls = tk.Button(
     khung_giua,
@@ -667,7 +760,7 @@ btn_dls = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("DLS")
 )
-btn_dls.pack(pady=6)
+btn_dls.pack(pady=1)
 
 btn_ids = tk.Button(
     khung_giua,
@@ -678,7 +771,7 @@ btn_ids = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("IDS")
 )
-btn_ids.pack(pady=6)
+btn_ids.pack(pady=1)
 
 btn_ids_dfs = tk.Button(
     khung_giua,
@@ -689,7 +782,7 @@ btn_ids_dfs = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("IDS-DFS")
 )
-btn_ids_dfs.pack(pady=6)
+btn_ids_dfs.pack(pady=1)
 
 btn_greedy = tk.Button(
     khung_giua,
@@ -700,7 +793,7 @@ btn_greedy = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("GREEDY")
 )
-btn_greedy.pack(pady=6)
+btn_greedy.pack(pady=1)
 
 btn_astar = tk.Button(
     khung_giua,
@@ -711,7 +804,7 @@ btn_astar = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("ASTAR")
 )
-btn_astar.pack(pady=6)
+btn_astar.pack(pady=1)
 
 btn_hill = tk.Button(
     khung_giua,
@@ -722,7 +815,7 @@ btn_hill = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("HILL")
 )
-btn_hill.pack(pady=6)
+btn_hill.pack(pady=1)
 
 btn_sa = tk.Button(
     khung_giua,
@@ -733,7 +826,7 @@ btn_sa = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("SA")
 )
-btn_sa.pack(pady=6)
+btn_sa.pack(pady=1)
 
 btn_beam = tk.Button(
     khung_giua,
@@ -744,7 +837,7 @@ btn_beam = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("BEAM")
 )
-btn_beam.pack(pady=6)
+btn_beam.pack(pady=1)
 
 btn_genetic = tk.Button(
     khung_giua,
@@ -755,7 +848,29 @@ btn_genetic = tk.Button(
     width=14,
     command=lambda: chuan_bi_va_chay("GENETIC")
 )
-btn_genetic.pack(pady=6)
+btn_genetic.pack(pady=1)
+
+btn_andor = tk.Button(
+    khung_giua,
+    text="Chạy AND-OR",
+    font=("Arial", 14, "bold"),
+    bg="#1abc9c",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("ANDOR")
+)
+btn_andor.pack(pady=1)
+
+btn_bfs_belief = tk.Button(
+    khung_giua,
+    text="Chạy BFS Belief",
+    font=("Arial", 14, "bold"),
+    bg="#74b9ff",
+    fg="white",
+    width=14,
+    command=lambda: chuan_bi_va_chay("BFS-BELIEF")
+)
+btn_bfs_belief.pack(pady=1)
 
 
 btn_dung = tk.Button(
@@ -767,7 +882,7 @@ btn_dung = tk.Button(
     width=14,
     command=dung_auto
 )
-btn_dung.pack(pady=6)
+btn_dung.pack(pady=1)
 
 btn_dich = tk.Button(
     khung_giua,
