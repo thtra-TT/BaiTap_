@@ -55,6 +55,12 @@ canvas_trai.pack(padx=10, pady=10)
 khung_giua = tk.Frame(khung_chinh, bg="#25324D")
 khung_giua.grid(row=1, column=1, padx=10, sticky="n")
 
+khung_giua_trai = tk.Frame(khung_giua, bg="#25324D")
+khung_giua_trai.grid(row=0, column=0, padx=5, sticky="n")
+
+khung_giua_phai = tk.Frame(khung_giua, bg="#25324D")
+khung_giua_phai.grid(row=0, column=1, padx=5, sticky="n")
+
 # bàn cờ trạng thái đích
 khung_phai = tk.Frame(khung_chinh, bg="#344161")
 khung_phai.grid(row=1, column=2, padx=10)
@@ -337,7 +343,7 @@ def simulated_annealing_timkiem(dich):
     T0 = 10.0
     alpha = 0.995
     Tmin = 1e-4
-    max_outer = 5000  # giới hạn vòng lặp ngoài để tránh chạy vô hạn
+    max_outer = 5000  # giới hạn vòng lặp ngoài để tránh vô hạn
 
     target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
 
@@ -568,7 +574,106 @@ def bfs_belief_timkiem(dich):
 
     return buoc
 
-# ========= Quản lý hiển thị/chạy =========
+def dfs_belief_partial_timkiem(dich, da_biet=None, n=SO_HANG):
+    if da_biet is None:
+        da_biet = []
+
+    buoc = []
+    target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+    known = {r: c for r, c in da_biet}
+
+    def is_goal(state):
+        return len(state) == n and all(state[i][1] == target_cols[i] for i in range(n))
+
+    stack = [([], set())]   # (state, used columns)
+
+    while stack:
+        state, used = stack.pop()
+        buoc.append(state.copy())
+        r = len(state)
+
+        if r == n:
+            if is_goal(state):
+                return [state[:k] for k in range(n+1)]
+            continue
+
+        if r in known:
+            col = known[r]
+            if col not in used:
+                stack.append((state + [(r, col)], used | {col}))
+        else:
+            cot_uu_tien = target_cols[r]
+            candidates = []
+            if cot_uu_tien not in used:
+                candidates.append(cot_uu_tien)
+            for c in range(n):
+                if c != cot_uu_tien and c not in used:
+                    candidates.append(c)
+
+            for c in reversed(candidates):
+                stack.append((state + [(r, c)], used | {c}))
+
+    return buoc
+
+
+
+def backtracking_timkiem(dich, n=SO_HANG):
+    buoc = []
+
+    def an_toan(trangthai, row, col):
+        for r, c in trangthai:
+            if c == col:
+                return False
+        return True
+
+    def thu(row, trangthai):
+        if row == n:
+            if set(trangthai) == set(dich):
+                buoc.extend([trangthai[:k] for k in range(0, n+1)])
+                return True
+            return False
+
+        for col in range(n):
+            if an_toan(trangthai, row, col):
+                trangthai.append((row, col))
+                if thu(row + 1, trangthai):
+                    return True
+                trangthai.pop()
+        return False
+
+    thu(0, [])
+    return buoc
+
+def backtracking_forward_timkiem(dich, n=SO_HANG):
+    buoc = []
+
+    def thu(row, trangthai, domains):
+        if row == n:
+            if set(trangthai) == set(dich):
+                buoc.extend([trangthai[:k] for k in range(0, n+1)])
+                return True
+            return False
+
+        for col in list(domains[row]):
+            trangthai.append((row, col))
+
+            new_domains = [set(d) for d in domains] #bỏ đi các cột đã dùng
+            for r in range(row+1, n):
+                if col in new_domains[r]:
+                    new_domains[r].remove(col)
+
+            if all(new_domains[r] for r in range(row+1, n)):
+                if thu(row+1, trangthai, new_domains):
+                    return True
+
+            trangthai.pop()
+        return False
+
+    domains = [set(range(n)) for _ in range(n)]
+    thu(0, [], domains)
+    return buoc
+
+# ========= Quản lý hiển thị/=========
 trangthai_dich = tao_dich()
 ds_buoc = []
 chi_so = [0]
@@ -660,6 +765,20 @@ def chuan_bi_va_chay(thuat_toan):
         ds_buoc = bfs_belief_timkiem(trangthai_dich)
         che_do[0] = "BFS-BELIEF"
         lbl_trai.config(text="Bàn cờ thuật toán (BFS Belief)")
+    elif thuat_toan == "DFS-BELIEF-PARTIAL":
+        da_biet = [(r, c) for r, c in trangthai_dich[:3]]  # 3 hàng đầu trong đích
+        ds_buoc = dfs_belief_partial_timkiem(trangthai_dich, da_biet)
+        che_do[0] = "DFS-BELIEF-PARTIAL"
+        lbl_trai.config(text="Bàn cờ thuật toán (DFS Belief Partial)")
+    elif thuat_toan == "BACKTRACKING":
+        ds_buoc = backtracking_timkiem(trangthai_dich)
+        che_do[0] = "BACKTRACKING"
+        lbl_trai.config(text="Bàn cờ thuật toán (Backtracking)")
+    elif thuat_toan == "BACKTRACKING-FC":
+        ds_buoc = backtracking_forward_timkiem(trangthai_dich)
+        che_do[0] = "BACKTRACKING-FC"
+        lbl_trai.config(text="Bàn cờ thuật toán (Backtracking-FC)")
+
 
 
     ve_banco(canvas_trai, O_TRAI)
@@ -715,182 +834,226 @@ def tao_dich_moi():
     elif che_do[0] == "BFS-BELIEF":
         ds_buoc = bfs_belief_timkiem(trangthai_dich)
         phat_tiep()
+    elif che_do[0] == "BACKTRACKING":
+        ds_buoc = backtracking_timkiem(trangthai_dich)
+    elif che_do[0] == "BACKTRACKING-FC":
+        ds_buoc = backtracking_forward_timkiem(trangthai_dich)
+        phat_tiep()
+    elif che_do[0] == "DFS-BELIEF-PARTIAL":
+        da_biet = [(r, c) for r, c in trangthai_dich[:3]]  # 3 hàng đầu trong đích mới
+        ds_buoc = dfs_belief_partial_timkiem(trangthai_dich, da_biet)
+        phat_tiep()
+
+
 
 
 # ========= Nút điều khiển =========
 btn_dfs = tk.Button(
-    khung_giua,
-    text="Chạy DFS",
+    khung_giua_trai,
+    text="DFS",
     font=("Arial", 14, "bold"),
     bg="#8e44ad",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("DFS")
 )
 btn_dfs.pack(pady=(10, 6))
 
 btn_bfs = tk.Button(
-    khung_giua,
-    text="Chạy BFS",
+    khung_giua_trai,
+    text="BFS",
     font=("Arial", 14, "bold"),
     bg="#27ae60",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("BFS")
 )
 btn_bfs.pack(pady=1)
 
 btn_ucs = tk.Button(
-    khung_giua,
-    text="Chạy UCS",
+    khung_giua_trai,
+    text="UCS",
     font=("Arial", 14, "bold"),
     bg="#f39c12",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("UCS")
 )
 btn_ucs.pack(pady=1)
 
 btn_dls = tk.Button(
-    khung_giua,
-    text="Chạy DLS",
+    khung_giua_trai,
+    text="DLS",
     font=("Arial", 14, "bold"),
     bg="#16a085",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("DLS")
 )
 btn_dls.pack(pady=1)
 
 btn_ids = tk.Button(
-    khung_giua,
-    text="Chạy IDS",
+    khung_giua_trai,
+    text="IDS",
     font=("Arial", 14, "bold"),
     bg="#2c3e50",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("IDS")
 )
 btn_ids.pack(pady=1)
 
 btn_ids_dfs = tk.Button(
-    khung_giua,
-    text="Chạy IDS-DFS",
+    khung_giua_trai,
+    text="IDS-DFS",
     font=("Arial", 14, "bold"),
     bg="#9b59b6",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("IDS-DFS")
 )
 btn_ids_dfs.pack(pady=1)
 
 btn_greedy = tk.Button(
-    khung_giua,
-    text="Chạy Greedy",
+    khung_giua_trai,
+    text="Greedy",
     font=("Arial", 14, "bold"),
     bg="#d35400",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("GREEDY")
 )
 btn_greedy.pack(pady=1)
 
 btn_astar = tk.Button(
-    khung_giua,
-    text="Chạy A*",
+    khung_giua_trai,
+    text="A*",
     font=("Arial", 14, "bold"),
     bg="#27ae60",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("ASTAR")
 )
 btn_astar.pack(pady=1)
 
 btn_hill = tk.Button(
-    khung_giua,
-    text="Chạy Hill Climbing",
+    khung_giua_trai,
+    text="Hill Climbing",
     font=("Arial", 14, "bold"),
     bg="#6c5ce7",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("HILL")
 )
 btn_hill.pack(pady=1)
 
 btn_sa = tk.Button(
-    khung_giua,
-    text="Chạy SA",
+    khung_giua_phai,
+    text="SA",
     font=("Arial", 14, "bold"),
     bg="#00cec9",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("SA")
 )
 btn_sa.pack(pady=1)
 
 btn_beam = tk.Button(
-    khung_giua,
-    text="Chạy Beam Search",
+    khung_giua_phai,
+    text="Beam Search",
     font=("Arial", 14, "bold"),
     bg="#fd79a8",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("BEAM")
 )
 btn_beam.pack(pady=1)
 
 btn_genetic = tk.Button(
-    khung_giua,
-    text="Chạy Genetic",
+    khung_giua_phai,
+    text="Genetic",
     font=("Arial", 14, "bold"),
     bg="#e74c3c",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("GENETIC")
 )
 btn_genetic.pack(pady=1)
 
 btn_andor = tk.Button(
-    khung_giua,
-    text="Chạy AND-OR",
+    khung_giua_phai,
+    text="AND-OR",
     font=("Arial", 14, "bold"),
     bg="#1abc9c",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("ANDOR")
 )
 btn_andor.pack(pady=1)
 
 btn_bfs_belief = tk.Button(
-    khung_giua,
-    text="Chạy BFS Belief",
+    khung_giua_phai,
+    text="BFS Belief",
     font=("Arial", 14, "bold"),
     bg="#74b9ff",
     fg="white",
-    width=14,
+    width= 10,
     command=lambda: chuan_bi_va_chay("BFS-BELIEF")
 )
 btn_bfs_belief.pack(pady=1)
 
+btn_dfs_belief_partial = tk.Button(
+    khung_giua_phai,
+    text="DFS Belief Partial",
+    font=("Arial", 14, "bold"),
+    bg="#ff7675",
+    fg="white",
+    width= 10,
+    command=lambda: chuan_bi_va_chay("DFS-BELIEF-PARTIAL")
+)
+btn_dfs_belief_partial.pack(pady=2)
+
+btn_backtracking = tk.Button(
+    khung_giua_phai,
+    text="Backtracking",
+    font=("Arial", 14, "bold"),
+    bg="#27ae60",
+    fg="white",
+    width= 10,
+    command=lambda: chuan_bi_va_chay("BACKTRACKING")
+)
+btn_backtracking.pack(pady=(10, 6))
+
+btn_backtracking_fc = tk.Button(
+    khung_giua_phai,
+    text="Backtracking-FC",
+    font=("Arial", 14, "bold"),
+    bg="#e67e22",
+    fg="white",
+    width= 10,
+    command=lambda: chuan_bi_va_chay("BACKTRACKING-FC")
+)
+btn_backtracking_fc.pack(pady=(2, 6))
+
 
 btn_dung = tk.Button(
-    khung_giua,
+    khung_giua_phai,
     text="Dừng",
     font=("Arial", 14, "bold"),
     bg="#e74c3c",
     fg="white",
-    width=14,
+    width= 10,
     command=dung_auto
 )
 btn_dung.pack(pady=1)
 
 btn_dich = tk.Button(
-    khung_giua,
+    khung_giua_phai,
     text="Tạo đích mới",
     font=("Arial", 14, "bold"),
     bg="#2980b9",
     fg="white",
-    width=14,
+    width= 10,
     command=tao_dich_moi
 )
 btn_dich.pack(pady=(6, 12))
