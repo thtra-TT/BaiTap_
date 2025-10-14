@@ -1,23 +1,64 @@
 import tkinter as tk
+from tkinter import ttk
 import tkinter.font as tkfont
 import random
 from collections import deque
 import heapq
 import math
-import random
 from tkinter import messagebox
+from PIL import Image, ImageTk
+import pygame
+import time
+from datetime import datetime
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
+
+
+lich_su_chay = []  
+pygame.mixer.init()
+
 
 SO_HANG = 8
 O_TRAI = 70
-O_PHAI = 60
+O_PHAI = 35
 KHOANG_THOI_GIAN = 300  
 
 root = tk.Tk()
 root.title("Trò chơi 8 quân xe")
 root.configure(bg="#25324D")
 
+# Tạo frame màn hình bắt đầu
+start_frame = tk.Frame(root, bg="#25324D")
+start_frame.pack(fill="both", expand=True)
+
+# Tải ảnh startScreen.png
+start_img = Image.open("startScreen.png")
+start_img = start_img.resize((800, 600))
+start_photo = ImageTk.PhotoImage(start_img)
+
+# Label hiển thị ảnh
+start_label = tk.Label(start_frame, image=start_photo)
+start_label.image = start_photo
+start_label.pack(fill="both", expand=True)
+
+# Hàm để chuyển sang giao diện chính
+def start_game():
+    start_frame.pack_forget()
+    khung_chinh.pack(padx=20, pady=20)
+
+# Nút Start
+start_button = tk.Button(
+    start_frame,
+    text="START",
+    font=("Arial", 20, "bold"),
+    bg="#27ae60",
+    fg="white",
+    width=10,
+    command=start_game
+)
+start_button.place(relx=0.5, rely=0.8, anchor="center")
+
 khung_chinh = tk.Frame(root, bg="#25324D")
-khung_chinh.pack(padx=20, pady=20)
 
 tieu_de = tk.Label(
     khung_chinh,
@@ -27,6 +68,105 @@ tieu_de = tk.Label(
     fg="white"
 )
 tieu_de.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+
+# 
+frm_header_buttons = tk.Frame(khung_chinh, bg="#25324D")
+frm_header_buttons.grid(row=0, column=2, sticky="ne", padx=(0, 30), pady=(0, 20))
+
+def go_home():
+    """Quay về màn hình bắt đầu (Start Screen)"""
+    try:
+        dung_auto() 
+    except Exception:
+        pass
+
+    # Reset toàn bộ trạng thái
+    global ds_buoc, chi_so, trangthai_dich
+    ds_buoc = []
+    chi_so = [0]
+    trangthai_dich = tao_dich()
+    
+    # Xóa bàn cờ
+    ve_banco(canvas_trai, O_TRAI)
+    ve_banco(canvas_phai, O_PHAI)
+
+    # Ẩn khung giao diện chính
+    khung_chinh.pack_forget()
+
+    # Hiện lại màn hình Start
+    start_frame.pack(fill="both", expand=True)
+
+
+try:
+    pygame.mixer.music.load("chess.mp3")
+    pygame.mixer.music.play(-1)
+    pygame.mixer.music.set_volume(0.5)
+except Exception as e:
+    print("Không thể phát nhạc nền:", e)
+
+sound_on = True
+
+def toggle_sound():
+    global sound_on 
+    if sound_on:
+        pygame.mixer.music.pause()
+        btn_sound.config(text="🔇", bg="#9E9E9E")
+        sound_on = False
+    else:
+        pygame.mixer.music.unpause()
+        btn_sound.config(text="🔊", bg="#4CAF50")
+        sound_on = True
+
+def tiep_tuc():
+    """Tiếp tục chạy các bước còn lại sau khi dừng"""
+    if after_id[0] is None and ds_buoc:
+        ghi_trangthai("▶️ Tiếp tục chạy các bước còn lại...")
+        phat_tiep()
+
+def reset_banco():
+    """Reset về bàn cờ trống ban đầu"""
+    dung_auto()
+    global ds_buoc, chi_so, trangthai_dich
+    ds_buoc = []
+    chi_so[0] = 0
+    trangthai_dich = []  # không có quân đích nào
+    ve_banco(canvas_trai, O_TRAI)
+    ve_banco(canvas_phai, O_PHAI)
+    lbl_trai.config(text="Bàn cờ thuật toán (Trống)")
+    ghi_trangthai("🔁 Đã reset bàn cờ về trạng thái ban đầu.")
+
+btn_home = tk.Button(
+    frm_header_buttons,
+    text="🏠",
+    font=("Arial", 16),
+    fg="white",
+    bg="#1abc9c",
+    activebackground="#16a085",
+    width=3,
+    height=1,
+    bd=0,
+    relief="flat",
+    cursor="hand2",
+    command=go_home
+)
+btn_home.pack(side="right", padx=5)
+
+btn_sound = tk.Button(
+    frm_header_buttons,
+    text="🔊",
+    font=("Arial", 16),
+    fg="white",
+    bg="#4CAF50",
+    activebackground="#388E3C",
+    width=3,
+    height=1,
+    bd=0,
+    relief="flat",
+    cursor="hand2",
+    command=toggle_sound
+)
+btn_sound.pack(side="right", padx=5)
+
 
 # bàn cờ trái
 khung_trai = tk.Frame(khung_chinh, bg="#344161")
@@ -55,24 +195,19 @@ canvas_trai.pack(padx=10, pady=10)
 khung_giua = tk.Frame(khung_chinh, bg="#25324D")
 khung_giua.grid(row=1, column=1, padx=10, sticky="n")
 
-khung_giua_trai = tk.Frame(khung_giua, bg="#25324D")
-khung_giua_trai.grid(row=0, column=0, padx=5, sticky="n")
-
-khung_giua_phai = tk.Frame(khung_giua, bg="#25324D")
-khung_giua_phai.grid(row=0, column=1, padx=5, sticky="n")
-
 # bàn cờ trạng thái đích
 khung_phai = tk.Frame(khung_chinh, bg="#344161")
-khung_phai.grid(row=1, column=2, padx=10)
+khung_phai.grid(row=1, column=2, padx=10, pady=(0, 0), sticky="n")
+
 
 lbl_phai = tk.Label(
     khung_phai,
     text="Bàn cờ đích",
-    font=("Arial", 15, "bold"),
+    font=("Arial", 14, "bold"),
     bg="#344161",
     fg="white"
 )
-lbl_phai.pack(pady=(10, 5))
+lbl_phai.pack(pady=(2, 0))  # đẩy label lên sát top
 
 canvas_phai = tk.Canvas(
     khung_phai,
@@ -82,7 +217,8 @@ canvas_phai = tk.Canvas(
     highlightthickness=2,
     highlightbackground="#ecf0f1"
 )
-canvas_phai.pack(padx=10, pady=10)
+canvas_phai.pack(padx=10, pady=(0, 5))
+
 
 # vẽ bàn cờ 
 def ve_banco(canvas, kichthuoc):
@@ -133,7 +269,7 @@ def dfs_timkiem(dich):
                 stack.append((trangthai + [(r, c)], used | {c}))
     return buoc
 
-# BFS
+#BFS
 def bfs_timkiem(dich):
     target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
     queue = deque([([], set())])  # (state, used_cols)
@@ -159,8 +295,9 @@ def bfs_timkiem(dich):
 
     return []
 
+
+
 # ========= UCS =========
-# ========= UCS (Uniform-Cost Search) =========
 # Chi phí mỗi bước = |c - target_cols[r]|
 def ucs_timkiem(dich):
     target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
@@ -436,8 +573,6 @@ def beam_search_timkiem(dich, beam_width=3):
 
     return []
 
-import random
-
 def genetic_algorithm_timkiem(dich, pop_size=30, generations=500, mutation_rate=0.2):
     target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
 
@@ -532,7 +667,6 @@ def andor_timkiem(dich):
     return buoc
 
 # ========= BFS trên tập trạng thái niềm tin =========
-from collections import deque
 
 def bfs_belief_timkiem(dich):
     target_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
@@ -673,6 +807,57 @@ def backtracking_forward_timkiem(dich, n=SO_HANG):
     thu(0, [], domains)
     return buoc
 
+#AC3
+
+def ac3_timkiem(dich, n=SO_HANG):
+    buoc = []
+    goal_cols = [c for (_, c) in sorted(dich, key=lambda x: x[0])]
+
+    # --- Khởi tạo miền giá trị ---
+    domains = {r: set(range(n)) for r in range(n)}
+
+    def consistent(xi, xj, vi, vj):
+        return vi != vj
+
+    queue = deque([(xi, xj) for xi in range(n) for xj in range(n) if xi != xj])
+
+    while queue:
+        xi, xj = queue.popleft()
+        revised = False
+
+        to_remove = set()
+        for vi in domains[xi]:
+            if not any(consistent(xi, xj, vi, vj) for vj in domains[xj]):
+                to_remove.add(vi)
+
+        if to_remove:
+            domains[xi] -= to_remove
+            revised = True
+            buoc.append([{r: sorted(list(domains[r])) for r in range(n)}])
+            if not domains[xi]:
+                return []
+
+            for xk in range(n):
+                if xk != xi and xk != xj:
+                    queue.append((xk, xi))
+
+    solution = []
+    used_cols = set()
+    for r in range(n):
+        candidates = sorted(domains[r], key=lambda c: abs(c - goal_cols[r]))
+        for c in candidates:
+            if c not in used_cols:
+                solution.append((r, c))
+                used_cols.add(c)
+                break
+
+    if [col for _, col in solution] == goal_cols:
+        return [solution[:k] for k in range(n + 1)]
+    else:
+        return [solution[:k] for k in range(len(solution) + 1)]
+
+
+
 # ========= Quản lý hiển thị/=========
 trangthai_dich = tao_dich()
 ds_buoc = []
@@ -695,20 +880,35 @@ def dung_auto():
     if after_id[0] is not None:
         root.after_cancel(after_id[0])
         after_id[0] = None
+        ghi_trangthai("⏸️ Đã tạm dừng thuật toán.")
 
 def phat_tiep():
     if chi_so[0] < len(ds_buoc):
         ve_trangthai_hien_tai()
+        ghi_trangthai(f"🧩 Bước {chi_so[0]+1}/{len(ds_buoc)}: Đã đặt {len(ds_buoc[chi_so[0]])} quân xe.")
         chi_so[0] += 1
         if chi_so[0] < len(ds_buoc):
             after_id[0] = root.after(KHOANG_THOI_GIAN, phat_tiep)
         else:
             after_id[0] = None
+            ghi_trangthai("✅ Thuật toán hoàn tất!")
+            ghi_trangthai("🎯 Đã đạt trạng thái đích!")
+
 
 def chuan_bi_va_chay(thuat_toan):
     dung_auto()
     global ds_buoc, chi_so
     chi_so[0] = 0
+
+    txt_trangthai.config(state="normal")
+    txt_trangthai.delete("1.0", "end")
+    txt_trangthai.insert("end", f"🚀 Đang chạy thuật toán: {thuat_toan}\n")
+    txt_trangthai.insert("end", "----------------------------------\n")
+    txt_trangthai.insert("end", "🔍 Bắt đầu tìm kiếm lời giải...\n")
+    txt_trangthai.config(state="disabled")
+
+    start_time = time.time()
+
     if thuat_toan == "DFS":
         ds_buoc = dfs_timkiem(trangthai_dich)
         che_do[0] = "DFS"
@@ -778,8 +978,27 @@ def chuan_bi_va_chay(thuat_toan):
         ds_buoc = backtracking_forward_timkiem(trangthai_dich)
         che_do[0] = "BACKTRACKING-FC"
         lbl_trai.config(text="Bàn cờ thuật toán (Backtracking-FC)")
+    elif thuat_toan == "AC3":
+        ds_buoc = ac3_timkiem(trangthai_dich)
+        che_do[0] = "AC3"
+        lbl_trai.config(text="Bàn cờ thuật toán (AC-3)")
 
 
+
+    end_time = time.time()
+    duration = round(end_time - start_time, 4)
+
+    ket_qua = "✅ Thành công" if ds_buoc else "❌ Thất bại"
+    lich_su_chay.append({
+        "thuat_toan": thuat_toan,
+        "thoi_gian": duration,
+        "ket_qua": ket_qua,
+        "thoi_diem": datetime.now().strftime("%H:%M:%S %d/%m/%Y")
+    })
+
+    # --- Ghi ra khung trạng thái ---
+    ghi_trangthai(f"🕒 Thời gian thực thi: {duration} giây")
+    ghi_trangthai(f"📋 Kết quả: {ket_qua}")
 
     ve_banco(canvas_trai, O_TRAI)
     phat_tiep()
@@ -787,6 +1006,7 @@ def chuan_bi_va_chay(thuat_toan):
 
 def tao_dich_moi():
     dung_auto()
+    ghi_trangthai("🎯 Đã tạo trạng thái đích mới.")
     global trangthai_dich, ds_buoc, chi_so
     trangthai_dich = tao_dich()
     ve_dich()
@@ -844,219 +1064,246 @@ def tao_dich_moi():
         ds_buoc = dfs_belief_partial_timkiem(trangthai_dich, da_biet)
         phat_tiep()
 
+def xem_lich_su():
+    """Hiển thị cửa sổ lịch sử chạy thuật toán (2 tab: bảng & biểu đồ)"""
+    if not lich_su_chay:
+        messagebox.showinfo("Lịch sử", "Chưa có lần chạy nào được ghi lại.")
+        return
+
+    win = tk.Toplevel(root)
+    win.title("📜 Lịch sử chạy thuật toán")
+    win.configure(bg="#1B2A41")
+    win.geometry("650x500")
+
+    lbl_title = tk.Label(
+        win,
+        text="📜 LỊCH SỬ CHẠY THUẬT TOÁN",
+        font=("Arial", 16, "bold"),
+        bg="#1B2A41",
+        fg="#FFD700"
+    )
+    lbl_title.pack(pady=10)
+
+    # ========== Tạo TabControl ==========
+    notebook = ttk.Notebook(win)
+    notebook.pack(fill="both", expand=True, padx=10, pady=10)
+
+    # --- TAB 1: Bảng lịch sử ---
+    tab_table = tk.Frame(notebook, bg="#1B2A41")
+    notebook.add(tab_table, text="📋 Danh sách")
+
+    cols = ("Thuật toán", "Kết quả", "Thời gian (s)", "Thời điểm")
+    table = ttk.Treeview(tab_table, columns=cols, show="headings", height=15)
+    for col in cols:
+        table.heading(col, text=col)
+        table.column(col, anchor="center", width=140)
+    table.pack(fill="both", expand=True, padx=10, pady=10)
+
+    for entry in lich_su_chay:
+        table.insert("", "end", values=(
+            entry["thuat_toan"],
+            entry["ket_qua"],
+            entry["thoi_gian"],
+            entry["thoi_diem"]
+        ))
+
+    # --- TAB 2: Biểu đồ so sánh thời gian ---
+    tab_chart = tk.Frame(notebook, bg="#1B2A41")
+    notebook.add(tab_chart, text="📊 Biểu đồ so sánh")
+
+    if lich_su_chay:
+        # Gom dữ liệu: chọn thời gian nhỏ nhất cho mỗi thuật toán
+        data = {}
+        for item in lich_su_chay:
+            algo = item["thuat_toan"]
+            t = item["thoi_gian"]
+            if algo not in data or t < data[algo]:
+                data[algo] = t
+
+        algos = list(data.keys())
+        times = list(data.values())
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        bars = ax.bar(algos, times)
+        ax.set_title("So sánh thời gian chạy các thuật toán", fontsize=12, weight="bold")
+        ax.set_xlabel("Thuật toán")
+        ax.set_ylabel("Thời gian (giây)")
+        plt.xticks(rotation=45, ha="right")
+
+        # Ghi giá trị trên đầu cột
+        for bar, val in zip(bars, times):
+            ax.text(bar.get_x() + bar.get_width() / 2, val, f"{val:.3f}", ha="center", va="bottom")
+
+        canvas = FigureCanvasTkAgg(fig, master=tab_chart)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+
+    # --- Nút đóng ---
+    ttk.Button(win, text="Đóng", command=win.destroy).pack(pady=10)
 
 
-
-# ========= Nút điều khiển =========
-btn_dfs = tk.Button(
-    khung_giua_trai,
-    text="DFS",
-    font=("Arial", 14, "bold"),
-    bg="#8e44ad",
+btn_history = tk.Button(
+    frm_header_buttons,
+    text="📜",
+    font=("Arial", 16),
     fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("DFS")
+    bg="#7f8c8d",
+    activebackground="#616161",
+    width=3,
+    height=1,
+    bd=0,
+    relief="flat",
+    cursor="hand2",
+    command=xem_lich_su
 )
-btn_dfs.pack(pady=(10, 6))
+btn_history.pack(side="right", padx=5)
 
-btn_bfs = tk.Button(
-    khung_giua_trai,
-    text="BFS",
+
+# ====== Chọn thuật toán trong combobox ======
+lbl_chon = tk.Label(
+    khung_giua,
+    text="Chọn thuật toán:",
+    font=("Arial", 14, "bold"),
+    bg="#25324D",
+    fg="white"
+)
+lbl_chon.grid(row=0, column=0, sticky="w", pady=(10, 5))
+
+ds_thuat_toan = [
+    "DFS", "BFS", "UCS", "DLS", "IDS", "IDS-DFS",
+    "GREEDY", "ASTAR", "HILL", "SA",
+    "BEAM", "GENETIC", "ANDOR",
+    "BFS-BELIEF", "DFS-BELIEF-PARTIAL",
+    "BACKTRACKING", "BACKTRACKING-FC", "AC3"
+]
+
+combo_thuat_toan = ttk.Combobox(
+    khung_giua,
+    values=ds_thuat_toan,
+    font=("Arial", 13),
+    state="readonly",
+    width=20
+)
+combo_thuat_toan.set("Chọn thuật toán")
+combo_thuat_toan.grid(row=1, column=0, sticky="w", pady=(0, 10))
+
+btn_chay = tk.Button(
+    khung_giua,
+    text="▶️ Chạy thuật toán",
     font=("Arial", 14, "bold"),
     bg="#27ae60",
     fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("BFS")
+    width=18,
+    command=lambda: chuan_bi_va_chay(combo_thuat_toan.get())
 )
-btn_bfs.pack(pady=1)
+btn_chay.grid(row=2, column=0, sticky="w", pady=(5, 10))
 
-btn_ucs = tk.Button(
-    khung_giua_trai,
-    text="UCS",
+btn_dung = tk.Button(
+    khung_giua,
+    text="⏸️ Dừng",
     font=("Arial", 14, "bold"),
-    bg="#f39c12",
+    bg="#e74c3c",
     fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("UCS")
+    width=18,
+    command=dung_auto
 )
-btn_ucs.pack(pady=1)
+btn_dung.grid(row=3, column=0, sticky="w", pady=(2, 8))
 
-btn_dls = tk.Button(
-    khung_giua_trai,
-    text="DLS",
+btn_tiep_tuc = tk.Button(
+    khung_giua,
+    text="▶️ Tiếp tục",
     font=("Arial", 14, "bold"),
     bg="#16a085",
     fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("DLS")
+    width=18,
+    command=tiep_tuc
 )
-btn_dls.pack(pady=1)
+btn_tiep_tuc.grid(row=4, column=0, sticky="w", pady=(2, 8))
 
-btn_ids = tk.Button(
-    khung_giua_trai,
-    text="IDS",
-    font=("Arial", 14, "bold"),
-    bg="#2c3e50",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("IDS")
-)
-btn_ids.pack(pady=1)
-
-btn_ids_dfs = tk.Button(
-    khung_giua_trai,
-    text="IDS-DFS",
+btn_reset = tk.Button(
+    khung_giua,
+    text="🔁 Reset",
     font=("Arial", 14, "bold"),
     bg="#9b59b6",
     fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("IDS-DFS")
+    width=18,
+    command=reset_banco
 )
-btn_ids_dfs.pack(pady=1)
-
-btn_greedy = tk.Button(
-    khung_giua_trai,
-    text="Greedy",
-    font=("Arial", 14, "bold"),
-    bg="#d35400",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("GREEDY")
-)
-btn_greedy.pack(pady=1)
-
-btn_astar = tk.Button(
-    khung_giua_trai,
-    text="A*",
-    font=("Arial", 14, "bold"),
-    bg="#27ae60",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("ASTAR")
-)
-btn_astar.pack(pady=1)
-
-btn_hill = tk.Button(
-    khung_giua_trai,
-    text="Hill Climbing",
-    font=("Arial", 14, "bold"),
-    bg="#6c5ce7",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("HILL")
-)
-btn_hill.pack(pady=1)
-
-btn_sa = tk.Button(
-    khung_giua_phai,
-    text="SA",
-    font=("Arial", 14, "bold"),
-    bg="#00cec9",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("SA")
-)
-btn_sa.pack(pady=1)
-
-btn_beam = tk.Button(
-    khung_giua_phai,
-    text="Beam Search",
-    font=("Arial", 14, "bold"),
-    bg="#fd79a8",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("BEAM")
-)
-btn_beam.pack(pady=1)
-
-btn_genetic = tk.Button(
-    khung_giua_phai,
-    text="Genetic",
-    font=("Arial", 14, "bold"),
-    bg="#e74c3c",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("GENETIC")
-)
-btn_genetic.pack(pady=1)
-
-btn_andor = tk.Button(
-    khung_giua_phai,
-    text="AND-OR",
-    font=("Arial", 14, "bold"),
-    bg="#1abc9c",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("ANDOR")
-)
-btn_andor.pack(pady=1)
-
-btn_bfs_belief = tk.Button(
-    khung_giua_phai,
-    text="BFS Belief",
-    font=("Arial", 14, "bold"),
-    bg="#74b9ff",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("BFS-BELIEF")
-)
-btn_bfs_belief.pack(pady=1)
-
-btn_dfs_belief_partial = tk.Button(
-    khung_giua_phai,
-    text="DFS Belief Partial",
-    font=("Arial", 14, "bold"),
-    bg="#ff7675",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("DFS-BELIEF-PARTIAL")
-)
-btn_dfs_belief_partial.pack(pady=2)
-
-btn_backtracking = tk.Button(
-    khung_giua_phai,
-    text="Backtracking",
-    font=("Arial", 14, "bold"),
-    bg="#27ae60",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("BACKTRACKING")
-)
-btn_backtracking.pack(pady=(10, 6))
-
-btn_backtracking_fc = tk.Button(
-    khung_giua_phai,
-    text="Backtracking-FC",
-    font=("Arial", 14, "bold"),
-    bg="#e67e22",
-    fg="white",
-    width= 10,
-    command=lambda: chuan_bi_va_chay("BACKTRACKING-FC")
-)
-btn_backtracking_fc.pack(pady=(2, 6))
-
-
-btn_dung = tk.Button(
-    khung_giua_phai,
-    text="Dừng",
-    font=("Arial", 14, "bold"),
-    bg="#e74c3c",
-    fg="white",
-    width= 10,
-    command=dung_auto
-)
-btn_dung.pack(pady=1)
+btn_reset.grid(row=5, column=0, sticky="w", pady=(2, 8))
 
 btn_dich = tk.Button(
-    khung_giua_phai,
-    text="Tạo đích mới",
+    khung_giua,
+    text="🎯 Tạo đích mới",
     font=("Arial", 14, "bold"),
     bg="#2980b9",
     fg="white",
-    width= 10,
+    width=18,
     command=tao_dich_moi
 )
-btn_dich.pack(pady=(6, 12))
+btn_dich.grid(row=6, column=0, sticky="w", pady=(2, 8))
+
+
+#
+frame_trangthai = tk.Frame(khung_chinh, bg="#1B2A41", bd=3, relief="ridge")
+frame_trangthai.grid(
+    row=1,
+    column=1,
+    columnspan=2,
+    sticky="nsew",
+    padx=(10, 20),
+    pady=(350, 5)
+)
+
+# Tiêu đề khung
+lbl_trangthai_title = tk.Label(
+    frame_trangthai,
+    text="📋  TRẠNG THÁI",
+    font=("Arial", 14, "bold"),
+    bg="#1B2A41",
+    fg="#FFD700",
+    anchor="w",
+    padx=10
+)
+lbl_trangthai_title.pack(fill="x", pady=(5, 0))
+
+# Frame chứa text + scrollbar
+content_frame = tk.Frame(frame_trangthai, bg="#0F1A2B")
+content_frame.pack(fill="both", expand=True, padx=5, pady=5)
+
+scrollbar = tk.Scrollbar(content_frame)
+scrollbar.pack(side="right", fill="y")
+
+txt_trangthai = tk.Text(
+    content_frame,
+    height=10,
+    width=20,
+    bg="#0F1A2B",
+    fg="white",
+    font=("Consolas", 12),
+    wrap="word",
+    yscrollcommand=scrollbar.set,
+    relief="flat"
+)
+txt_trangthai.pack(fill="both", expand=True, padx=5, pady=5)
+scrollbar.config(command=txt_trangthai.yview)
+
+# Thêm nội dung mặc định ban đầu
+txt_trangthai.insert("end",
+    "👋 Chào mừng đến với 8 Quân Xe!\n\n"
+    "🧭  Nhiệm vụ: Tìm cách sắp xếp quân xe\n"
+    "🧱  Tránh xung đột theo hàng và cột\n"
+    "⚙️  Chọn thuật toán và bắt đầu hành trình!\n\n"
+    "🎯 Chúc bạn may mắn!\n"
+)
+txt_trangthai.config(state="disabled")
+
+def ghi_trangthai(noidung):
+    txt_trangthai.config(state="normal")
+    txt_trangthai.insert("end", noidung + "\n")
+    txt_trangthai.see("end")
+    txt_trangthai.config(state="disabled")
+    root.update_idletasks()  
+
 
 ve_dich()
 ve_banco(canvas_trai, O_TRAI)
