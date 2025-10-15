@@ -98,6 +98,9 @@ def dfs_timkiem(dich):
     # Nếu duyệt hết mà không tìm thấy trạng thái đích → trả về toàn bộ các bước đã duyệt
     return buoc
 ```
+![dfs](https://github.com/user-attachments/assets/dadb418e-453d-416e-96df-4e46b16b6d3f)
+
+
 ### 2.2. BFS  
 BFS tìm kiếm theo chiều rộng, dùng queue (FIFO).  
 ```python
@@ -147,6 +150,7 @@ def bfs_timkiem(dich):
     # Nếu không tìm thấy trạng thái trùng với đích, trả về rỗng
     return []
 ```
+![bfs](https://github.com/user-attachments/assets/1f1c2c58-8506-493a-870d-7bf4a161b536)
 
 ### 2.3. UCS
 Thuật toán Uniform Cost Search (UCS) là phiên bản tổng quát của BFS cho các bài toán có chi phí di chuyển khác nhau. 
@@ -199,6 +203,8 @@ def ucs_timkiem(dich):
     # Nếu không tìm được trạng thái đích → trả về rỗng
     return []
 ```
+![UCS](https://github.com/user-attachments/assets/0d5d2d4a-ac8b-4fc1-8608-fa71e0a1e72e)
+
 
 ### 2.4. DLS
 Thuật toán Depth-Limited Search là biến thể của DFS, trong đó việc tìm kiếm được giới hạn bởi một độ sâu xác định trước.
@@ -271,6 +277,7 @@ def dls_timkiem(dich, limit=SO_HANG):
     # Nếu không tìm thấy nghiệm, trả về toàn bộ quá trình duyệt
     return buoc
 ```
+![dls](https://github.com/user-attachments/assets/28095be0-0000-4295-b8d2-7021a8fd527d)
 
 ### 2.5. IDS
 Thuật toán Iterative Deepening Search (IDS) là biến thể của DFS có giới hạn độ sâu tăng dần.
@@ -335,6 +342,8 @@ def ids_dfs_timkiem(dich):
     # Nếu không tìm thấy nghiệm trong tất cả các giới hạn → trả về rỗng
     return []
 ```
+![IDS_DFS](https://github.com/user-attachments/assets/88222060-2efb-48b0-908f-96894ac3ade7)
+
 
 ### 2.6. Greedy
 Thuật toán Greedy là phương pháp tìm kiếm có thông tin, sử dụng hàm heuristic h(n) để ước lượng khoảng cách từ trạng thái hiện tại đến đích.
@@ -404,6 +413,7 @@ def greedy_timkiem(dich):
     # Nếu không tìm thấy trạng thái đích → trả về các bước đã duyệt
     return buoc
 ```
+![greedy](https://github.com/user-attachments/assets/e18c41c0-563b-4f19-bad1-01f88196ea7c)
 
 ### 2.7. Astar
 Thuật toán A* là thuật toán tìm kiếm có thông tin, kết hợp giữa chi phí thực tế g(n) và hàm ước lượng h(n) để xác định trạng thái cần mở rộng tiếp theo.
@@ -475,6 +485,7 @@ def astar_timkiem(dich):
     # Nếu duyệt hết mà không tìm thấy nghiệm → trả về toàn bộ các bước duyệt
     return buoc
 ```
+![astar](https://github.com/user-attachments/assets/d6c93d26-10e4-4a8c-90b9-340535703040)
 
 ### 2.8. Hill Climbing
 Thuật toán Hill Climbing là một kỹ thuật tìm kiếm cục bộ, chỉ quan tâm đến các trạng thái “láng giềng tốt hơn” so với hiện tại.
@@ -538,6 +549,7 @@ def hill_climbing_timkiem(dich):
     # Nếu leo đồi không đạt đích → trả về các bước đã duyệt
     return buoc
 ```
+![hill](https://github.com/user-attachments/assets/7d68359f-554f-45fd-85fd-2cbbe0e7d05b)
 
 ### 2.9. Simulated Annealing
 Thuật toán Simulated Annealing là một mở rộng của Hill Climbing giúp tránh kẹt ở cực đại cục bộ.
@@ -634,6 +646,7 @@ def simulated_annealing_timkiem(dich):
         pass
     return []
 ```
+![sa](https://github.com/user-attachments/assets/59c51b39-0e3b-43d8-9fc0-c361c534cc2c)
 
 ### 2.10. Beam Search
 Thuật toán Beam Search là một biến thể của tìm kiếm theo chiều rộng (BFS), trong đó chỉ giữ lại một số lượng giới hạn (beam_width) các trạng thái “tốt nhất” ở mỗi tầng dựa theo giá trị heuristic.
@@ -692,6 +705,7 @@ def beam_search_timkiem(dich, beam_width=3):
     # Nếu không tìm thấy trạng thái đích
     return []
 ```
+![beam](https://github.com/user-attachments/assets/eed2c79c-29dd-4238-b48e-8d8de48fcee1)
 
 ### 2.11. Genetic
 Thuật toán Genetic Algorithm (GA) mô phỏng quá trình chọn lọc tự nhiên để tìm nghiệm tối ưu.
@@ -784,6 +798,8 @@ def genetic_algorithm_timkiem(dich, pop_size=30, generations=500, mutation_rate=
     # kết thúc, ko thấy đích
     return []
 ```
+![gen](https://github.com/user-attachments/assets/48670a3b-be75-4491-bd31-ece4ab257394)
+
 
 ### 2.12. And Or Tree Search
 Thuật toán kết hợp hai kiểu nút — OR (lựa chọn hành động) và AND (ràng buộc điều kiện đồng thời) 
@@ -843,6 +859,8 @@ def andor_timkiem(dich):
     # Nếu không tìm được, trả về toàn bộ các bước đã duyệt
     return buoc
 ```
+![andor](https://github.com/user-attachments/assets/5b3d021e-4816-49cb-997a-1bb09181fd68)
+
 
 ### 2.13. Tìm kiếm với tập trạng thái niềm tin
 Thuật toán BFS Belief-State Search mở rộng tìm kiếm theo chiều rộng truyền thống vào không gian niềm tin (Belief Space).
@@ -904,6 +922,8 @@ def bfs_belief_timkiem(dich):
     # không thấy lời giải
     return buoc
 ```
+![niemtin](https://github.com/user-attachments/assets/4f63a868-5610-43c4-bd53-5923f5dfc9a8)
+
 
 ### 2.14. Tìm kiếm với tập trạng thái niềm tin nhìn thấy một phần
 Thuật toán tìm kiếm theo chiều sâu (DFS) cho môi trường quan sát một phần, nơi tác nhân chỉ biết một phần.
@@ -956,6 +976,8 @@ def dfs_belief_partial_timkiem(dich, da_biet=None, n=SO_HANG):
     # Nếu không tìm thấy, trả về tất cả các bước đã duyệt
     return buoc
 ```
+![motphan](https://github.com/user-attachments/assets/82ddc82b-c52b-4b8b-8e98-7ea958a81209)
+
 
 ### 2.15. Backtracking
 Thuật toán Backtracking (quay lui) là một phương pháp tìm kiếm có ràng buộc, dựa trên nguyên tắc “thử – sai – quay lại”.
@@ -1010,6 +1032,8 @@ def backtracking_timkiem(dich, n=SO_HANG):
     thu(0, [])
     return buoc
 ```
+![backtrack](https://github.com/user-attachments/assets/5dda405a-d2fb-4456-ac8e-dfd15d151ac4)
+
 
 ### 2.16. Forward Check
 Bằng cách duy trì tập giá trị khả dĩ (domain) cho mỗi biến, và loại bỏ sớm các giá trị không hợp lệ sau mỗi bước gán, thuật toán giúp phát hiện xung đột trước khi đi sâu vào cây tìm kiếm.
@@ -1055,6 +1079,8 @@ def backtracking_forward_timkiem(dich, n=SO_HANG):
     thu(0, [], domains)
     return buoc
 ```
+![FC](https://github.com/user-attachments/assets/37ec57ae-d232-4896-ac86-b648e3c6790b)
+
 
 ### 2.17. AC3
 Duy trì tính nhất quán cung (arc consistency) giữa các biến trong bài toán ràng buộc.
@@ -1129,8 +1155,7 @@ def ac3_timkiem(dich, n=SO_HANG):
         return [solution[:k] for k in range(len(solution) + 1)]
 ```
 
-
-
+![ac_3](https://github.com/user-attachments/assets/6047f121-3bcd-41a9-9b93-b2c451eb8f20)
 
 
 
