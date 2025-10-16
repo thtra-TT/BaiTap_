@@ -1157,6 +1157,18 @@ def ac3_timkiem(dich, n=SO_HANG):
 
 ![ac_3](https://github.com/user-attachments/assets/6047f121-3bcd-41a9-9b93-b2c451eb8f20)
 
+## 3. Giao diện  
+### 3.1. StartScreen  
+<img width="1005" height="792" alt="Screenshot 2025-10-16 084407" src="https://github.com/user-attachments/assets/5311100c-619d-4393-a4ae-67232a386aa3" />
+
+### 3.2. Giao diện chính  
+<img width="1515" height="962" alt="Screenshot 2025-10-16 085242" src="https://github.com/user-attachments/assets/e74855fd-0bf2-4d83-9bad-979ec036ecb2" />
+
+### 3.3. Lịch sử
+<img width="806" height="657" alt="Screenshot 2025-10-16 085933" src="https://github.com/user-attachments/assets/40e90141-1161-456a-a0a0-aed0d71159d9" />
+
+
+<img width="1918" height="1021" alt="Screenshot 2025-10-16 090001" src="https://github.com/user-attachments/assets/755bff33-03f4-4ea3-a0b7-873fc1203803" />
 
 
 
